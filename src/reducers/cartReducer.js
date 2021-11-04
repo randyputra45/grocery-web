@@ -1,3 +1,6 @@
+//IMPORT IMMER FOR IMMUTABLE
+import produce from 'immer'
+
 import Item1 from '../images/avocado.jpg'
 import Item2 from '../images/carrot.jpg'
 import Item3 from '../images/corn.jpg'
@@ -5,7 +8,6 @@ import Item4 from '../images/garlic.jpg'
 import Item5 from '../images/red-chili.jpg'
 import Item6 from '../images/tomato.jpg'
 import { ADD_TO_CART, REMOVE_ITEM, SUB_QUANTITY, ADD_QUANTITY, ADD_SHIPPING, SUB_SHIPPING } from '../actions/action-types/cartActions'
-
 
 const initState = {
   items: [
@@ -18,99 +20,97 @@ const initState = {
   ],
   addedItems: [],
   total: 0
-
 }
+
 const cartReducer = (state = initState, action) => {
+
+  function removeItem(id) {
+    const addedItems = state.addedItems.filter(item => item.id !== id)
+    const nextState = produce(state, (cart) => {
+      if (cart.addedItems.find(item => (item.id === id))) {
+        const found = cart.items.find(item => (item.id === id))
+        found.quantity = 0;
+      }
+    })
+  
+    let total = 0;
+    addedItems.map((item) => total += parseInt(item.price) * parseInt(item.quantity))
+    console.log(total)
+    if (total.length === 0) total = 0;
+    return {
+      ...nextState,
+      addedItems: addedItems,
+      total: total
+    };
+  }
 
   //INSIDE HOME COMPONENT
   if (action.type === ADD_TO_CART) {
-    let addedItem = state.items.find(item => item.id === action.id)
-    //check if the action id exists in the addedItems
-    let existed_item = state.addedItems.find(item => action.id === item.id)
-    if (existed_item) {
-      addedItem.quantity += 1
-      return {
-        ...state,
-        total: state.total + addedItem.price
+    const nextState = produce(state, (cart) => {
+      const id = action.payload;
+      if (cart.addedItems.find(item => (item.id === id))) {
+        const found = cart.addedItems.find(item => (item.id === id))
+        found.quantity++;
+        cart.total += parseInt(found.price)
+      } 
+      else {
+        const found = cart.items.find(item => (item.id === id))
+        found.quantity++;
+        cart.addedItems.push(found)
+        cart.total += parseInt(found.price)
       }
-    }
-    else {
-      addedItem.quantity = 1;
-      //calculating the total
-      let newTotal = state.total + addedItem.price
-
-      return {
-        ...state,
-        addedItems: [...state.addedItems, addedItem],
-        total: newTotal
-      }
-
-    }
+    })
+    return nextState;
   }
+
   if (action.type === REMOVE_ITEM) {
-    let itemToRemove = state.addedItems.find(item => action.id === item.id)
-    let new_items = state.addedItems.filter(item => action.id !== item.id)
-
-    //calculating the total
-    let newTotal = state.total - (itemToRemove.price * itemToRemove.quantity)
-    console.log(itemToRemove)
-    return {
-      ...state,
-      addedItems: new_items,
-      total: newTotal
-    }
+    // Add code here
+    const id = action.payload;  
+    return removeItem(id)
   }
+
+
   //INSIDE CART COMPONENT
   if (action.type === ADD_QUANTITY) {
-    let addedItem = state.items.find(item => item.id === action.id)
-    addedItem.quantity += 1
-    let newTotal = state.total + addedItem.price
-    return {
-      ...state,
-      total: newTotal
-    }
+    const nextState = produce(state, (cart) => {
+      const id = action.payload;
+      const found = cart.addedItems.find(item => (item.id === id))
+      found.quantity++;
+      cart.total += parseInt(found.price)
+    })
+    return nextState;
   }
-  if (action.type === SUB_QUANTITY) {
-    let addedItem = state.items.find(item => item.id === action.id)
-    //if the qt == 0 then it should be removed
-    if (addedItem.quantity === 1) {
-      let new_items = state.addedItems.filter(item => item.id !== action.id)
-      let newTotal = state.total - addedItem.price
-      return {
-        ...state,
-        addedItems: new_items,
-        total: newTotal
-      }
-    }
-    else {
-      addedItem.quantity -= 1
-      let newTotal = state.total - addedItem.price
-      return {
-        ...state,
-        total: newTotal
-      }
-    }
 
+  if (action.type === SUB_QUANTITY) {
+    const nextState = produce(state, (cart) => {
+      const id = action.payload;
+      const found = cart.addedItems.find(item => (item.id === id))
+      if (found.quantity === 1){
+        return removeItem(id)
+      }
+      found.quantity--;
+      cart.total -= parseInt(found.price)
+    })
+    return nextState;
   }
 
   if (action.type === ADD_SHIPPING) {
-    return {
-      ...state,
-      total: state.total + 6
-    }
+    // Add code here (OPTIONAL)
+    const nextState = produce(state, (cart) => {
+      cart.total += 6;
+    })
+    return nextState;
   }
 
   if (action.type === SUB_SHIPPING) {
-    return {
-      ...state,
-      total: state.total - 6
-    }
+    // Add code here (OPTIONAL)
+    const nextState = produce(state, (cart) => {
+      cart.total -= 6;
+    })
+    return nextState;
   }
-
   else {
-    return state
+    return state;
   }
-
 }
-
 export default cartReducer
